@@ -3197,6 +3197,7 @@ namespace TvPlugin
       {
         //MediaPortal.GUI.Library.Log.Debug("TvHome.OnBlackImageRendered()");
         _waitForBlackScreen.Set();
+        OnVideoReceived();
       }
     }
 

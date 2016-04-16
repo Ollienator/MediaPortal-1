@@ -239,7 +239,7 @@ namespace MediaPortal.Player
       {
         if (filterCodec._audioSwitcherFilter != null)
         {
-          DirectShowUtil.ReleaseComObject(filterCodec._audioSwitcherFilter);
+          DirectShowUtil.FinalReleaseComObject(filterCodec._audioSwitcherFilter);
           filterCodec._audioSwitcherFilter = null;
         }
         filterCodec._audioSwitcherFilter = DirectShowUtil.AddFilterToGraph(_graphBuilder, "MediaPortal AudioSwitcher");
@@ -343,7 +343,12 @@ namespace MediaPortal.Player
           if (_videoFormat.IsValid)
           {
             _vmr9 = new VMR9Util();
-            _vmr9.AddVMR9(_graphBuilder);
+            bool AddVMR9 = _vmr9.AddVMR9(_graphBuilder);
+            if (!AddVMR9)
+            {
+              Log.Error("TSReaderPlayer:Failed to add VMR9 to graph");
+              return false;
+            }
             _vmr9.Enable(false);
           }
 
@@ -810,68 +815,31 @@ namespace MediaPortal.Player
         {
           return;
         }
-        int hr;
         Log.Info("TSReaderPlayer: Cleanup DShow graph {0}", GUIGraphicsContext.InVmr9Render);
         try
         {
-          if (_mediaCtrl != null)
-          {
-            int counter = 0;
-            FilterState state;
-            hr = _mediaCtrl.Stop();
-            hr = _mediaCtrl.GetState(10, out state);
-            while (state != FilterState.Stopped || GUIGraphicsContext.InVmr9Render)
-            {
-              Thread.Sleep(100);
-              hr = _mediaCtrl.GetState(10, out state);
-              counter++;
-              if (counter >= 30)
-              {
-                if (state != FilterState.Stopped)
-                  Log.Error("TSReaderPlayer: graph still running");
-                if (GUIGraphicsContext.InVmr9Render)
-                  Log.Error("TSReaderPlayer: in renderer");
-                break;
-              }
-            }
-            _mediaCtrl = null;
-          }
-
           if (_vmr9 != null)
           {
+            if (_mediaCtrl != null)
+            {
+              // Stop the player
+              _vmr9.Vmr9MediaCtrl(_mediaCtrl);
+            }
             _vmr9.Enable(false);
           }
 
-          if (_mediaEvt != null)
-          {
-            hr = _mediaEvt.SetNotifyWindow(IntPtr.Zero, WM_GRAPHNOTIFY, IntPtr.Zero);
-            _mediaEvt = null;
-          }
-
-          if (_videoWin != null)
-          {
-            _videoWin.put_Owner(IntPtr.Zero);
-            _videoWin.put_Visible(OABool.False);
-            _videoWin = null;
-          }
-
-          _mediaSeeking = null;
-          _basicAudio = null;
-          _basicVideo = null;
-          _ireader = null;
-
           if (filterCodec != null && filterCodec._audioRendererFilter != null)
           {
-            while ((hr = DirectShowUtil.ReleaseComObject(filterCodec._audioRendererFilter)) > 0) ;
-            //DirectShowUtil.ReleaseComObject(filterCodec._audioRendererFilter, 5000);
+            DirectShowUtil.RemoveFilter(_graphBuilder, filterCodec._audioRendererFilter);
+            DirectShowUtil.FinalReleaseComObject(filterCodec._audioRendererFilter);
             filterCodec._audioRendererFilter = null;
             Log.Debug("TSReaderPlayer: Cleanup _audioRendererFilter");
           }
 
           if (_fileSource != null)
           {
-            while ((hr = DirectShowUtil.ReleaseComObject(_fileSource)) > 0) ;
-            //DirectShowUtil.ReleaseComObject(_fileSource, 5000);
+            DirectShowUtil.RemoveFilter(_graphBuilder, _fileSource);
+            DirectShowUtil.FinalReleaseComObject(_fileSource);
             _fileSource = null;
             Log.Debug("TSReaderPlayer: Cleanup _fileSource");
           }
@@ -879,98 +847,93 @@ namespace MediaPortal.Player
           PostProcessingEngine.GetInstance().FreePostProcess();
           Log.Debug("TSReaderPlayer: Cleanup FreePostProcess");
 
-          //ReleaseComObject from PostProcessFilter list objects.
+          //FinalReleaseComObject from PostProcessFilter list objects.
           foreach (var ppFilter in PostProcessFilterVideo)
           {
             if (ppFilter.Value != null)
-              while ((hr = DirectShowUtil.ReleaseComObject(ppFilter.Value)) > 0) ; 
-            //DirectShowUtil.ReleaseComObject(ppFilter.Value, 5000);
+            {
+              DirectShowUtil.RemoveFilter(_graphBuilder, ppFilter.Value as IBaseFilter);
+              DirectShowUtil.FinalReleaseComObject(ppFilter.Value);
+            }
           }
           PostProcessFilterVideo.Clear();
           foreach (var ppFilter in PostProcessFilterAudio)
           {
             if (ppFilter.Value != null)
-              while ((hr = DirectShowUtil.ReleaseComObject(ppFilter.Value)) > 0) ;
-            //DirectShowUtil.ReleaseComObject(ppFilter.Value, 5000);
+            {
+              DirectShowUtil.RemoveFilter(_graphBuilder, ppFilter.Value as IBaseFilter);
+              DirectShowUtil.FinalReleaseComObject(ppFilter.Value);
+            }
           }
           PostProcessFilterAudio.Clear();
           Log.Debug("TSReaderPlayer: Cleanup PostProcess");
 
           if (filterCodec != null && filterCodec._audioSwitcherFilter != null)
           {
-            while ((hr = DirectShowUtil.ReleaseComObject(filterCodec._audioSwitcherFilter)) > 0) ;
-            //DirectShowUtil.ReleaseComObject(filterCodec._audioSwitcherFilter, 5000);
+            DirectShowUtil.RemoveFilter(_graphBuilder, filterCodec._audioSwitcherFilter);
+            DirectShowUtil.FinalReleaseComObject(filterCodec._audioSwitcherFilter);
             filterCodec._audioSwitcherFilter = null;
             Log.Debug("TSReaderPlayer: Cleanup _audioSwitcherFilter");
           }
 
           if (_line21DecoderAnalog != null)
           {
-            while ((hr = DirectShowUtil.ReleaseComObject(_line21DecoderAnalog)) > 0) ;
-            //DirectShowUtil.ReleaseComObject(_line21DecoderAnalog, 5000);
+            DirectShowUtil.FinalReleaseComObject(_line21DecoderAnalog);
             _line21DecoderAnalog = null;
             Log.Debug("TSReaderPlayer: Cleanup _line21DecoderAnalog");
           }
 
           if (_line21DecoderDigital != null)
           {
-            while ((hr = DirectShowUtil.ReleaseComObject(_line21DecoderDigital)) > 0) ;
-            //hr = DirectShowUtil.ReleaseComObject(_line21DecoderDigital, 5000);
+            DirectShowUtil.FinalReleaseComObject(_line21DecoderDigital);
             _line21DecoderDigital = null;
             Log.Debug("TSReaderPlayer: Cleanup _line21DecoderDigital");
           }
 
           if (filterCodec != null && filterCodec.CoreCCParser != null)
           {
-            while ((hr = DirectShowUtil.ReleaseComObject(filterCodec.CoreCCParser)) > 0) ;
-            //DirectShowUtil.ReleaseComObject(filterCodec.CoreCCParser, 5000);
+            DirectShowUtil.RemoveFilter(_graphBuilder, filterCodec.CoreCCParser);
+            DirectShowUtil.FinalReleaseComObject(filterCodec.CoreCCParser);
             filterCodec.CoreCCParser = null;
             Log.Debug("TSReaderPlayer: Cleanup CoreCCParser");
           }
 
           if (filterCodec != null && filterCodec.AudioCodec != null)
           {
-            while ((hr = DirectShowUtil.ReleaseComObject(filterCodec.AudioCodec)) > 0) ;
-            //DirectShowUtil.ReleaseComObject(filterCodec.AudioCodec, 5000);
+            DirectShowUtil.RemoveFilter(_graphBuilder, filterCodec.AudioCodec);
+            DirectShowUtil.FinalReleaseComObject(filterCodec.AudioCodec);
             filterCodec.AudioCodec = null;
             Log.Debug("TSReaderPlayer: Cleanup AudioCodec");
           }
 
           if (filterCodec != null && filterCodec.VideoCodec != null)
           {
-            while ((hr = DirectShowUtil.ReleaseComObject(filterCodec.VideoCodec)) > 0) ;
-            //DirectShowUtil.ReleaseComObject(filterCodec.VideoCodec, 5000);
+            DirectShowUtil.RemoveFilter(_graphBuilder, filterCodec.VideoCodec);
+            DirectShowUtil.FinalReleaseComObject(filterCodec.VideoCodec);
             filterCodec.VideoCodec = null;
             Log.Debug("TSReaderPlayer: Cleanup VideoCodec");
           }
 
           if (filterCodec != null && filterCodec.line21VideoCodec != null)
           {
-            while ((hr = DirectShowUtil.ReleaseComObject(filterCodec.line21VideoCodec)) > 0) ;
-            //DirectShowUtil.ReleaseComObject(filterCodec.line21VideoCodec, 5000);
+            DirectShowUtil.RemoveFilter(_graphBuilder, filterCodec.line21VideoCodec);
+            DirectShowUtil.FinalReleaseComObject(filterCodec.line21VideoCodec);
             filterCodec.line21VideoCodec = null;
             Log.Debug("TSReaderPlayer: Cleanup line21VideoCodec");
           }
 
           if (filterCodec != null && filterCodec.line21CoreCCParser != null)
           {
-            while ((hr = DirectShowUtil.ReleaseComObject(filterCodec.line21CoreCCParser)) > 0) ;
-            //DirectShowUtil.ReleaseComObject(filterCodec.line21CoreCCParser, 5000);
+            DirectShowUtil.RemoveFilter(_graphBuilder, filterCodec.line21CoreCCParser);
+            DirectShowUtil.FinalReleaseComObject(filterCodec.line21CoreCCParser);
             filterCodec.line21CoreCCParser = null;
             Log.Debug("TSReaderPlayer: Cleanup line21CoreCCParser");
           }
-          if (_graphBuilder != null)
+
+          if (_vmr9 != null && _vmr9._vmr9Filter != null)
           {
-            DirectShowUtil.RemoveFilters(_graphBuilder);
-            if (_rotEntry != null)
-            {
-              _rotEntry.SafeDispose();
-              _rotEntry = null;
-            }
-            while ((hr = DirectShowUtil.ReleaseComObject(_graphBuilder)) > 0) ;
-            //DirectShowUtil.ReleaseComObject(_graphBuilder, 5000);
-            _graphBuilder = null;
-            Log.Debug("TSReaderPlayer: Cleanup _graphBuilder");
+            DirectShowUtil.DisconnectAllPins(_graphBuilder, _vmr9._vmr9Filter);
+            Log.Info("VideoPlayer9: Cleanup VMR9");
           }
 
           if (_dvbSubRenderer != null)
@@ -979,23 +942,60 @@ namespace MediaPortal.Player
             _dvbSubRenderer = null;
           }
 
+          if (_videoWin != null)
+          {
+            _videoWin.put_Owner(IntPtr.Zero);
+            _videoWin.put_Visible(OABool.False);
+          }
+
+          if (_mediaEvt != null)
+          {
+            _mediaEvt.SetNotifyWindow(IntPtr.Zero, WM_GRAPHNOTIFY, IntPtr.Zero);
+          }
+
+          if (_graphBuilder != null)
+          {
+            DirectShowUtil.RemoveFilters(_graphBuilder);
+            DirectShowUtil.FinalReleaseComObject(_graphBuilder);
+            Log.Debug("TSReaderPlayer: Cleanup _graphBuilder");
+          }
+
+          _mediaCtrl = null;
+          _mediaEvt = null;
+          _mediaSeeking = null;
+          _videoWin = null;
+          _basicAudio = null;
+          _basicVideo = null;
+          _ireader = null;
+          _graphBuilder = null;
+
           if (_vmr9 != null)
           {
             _vmr9.SafeDispose();
             _vmr9 = null;
           }
 
+          if (_rotEntry != null)
+          {
+            _rotEntry.SafeDispose();
+            _rotEntry = null;
+          }
+
           _state = PlayState.Init;
         }
         catch (Exception ex)
         {
+          if (_vmr9 != null)
+          {
+            _vmr9.RestoreGuiForMadVr();
+          }
           Log.Error("TSReaderPlayer: Exception while cleaning DShow graph - {0} {1}", ex.Message, ex.StackTrace);
         }
 
         try
         {
-            using (MPSettings xmlreader = new MPSettings())
-                xmlreader.SetValue("tvservice", "dvbdefttxtsubtitles", "999;999");
+          using (MPSettings xmlreader = new MPSettings())
+            xmlreader.SetValue("tvservice", "dvbdefttxtsubtitles", "999;999");
         }
         catch { }
 

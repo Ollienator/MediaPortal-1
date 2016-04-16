@@ -783,24 +783,27 @@ namespace MediaPortal.Player
     {
       if (_basicVideo != null)
       {
-        if (source.Left < 0 || source.Top < 0 || source.Width <= 0 || source.Height <= 0)
+        lock (_basicVideo)
         {
-          return;
-        }
-        if (destination.Width <= 0 || destination.Height <= 0)
-        {
-          return;
-        }
+          if (source.Left < 0 || source.Top < 0 || source.Width <= 0 || source.Height <= 0)
+          {
+            return;
+          }
+          if (destination.Width <= 0 || destination.Height <= 0)
+          {
+            return;
+          }
 
-        _basicVideo.SetSourcePosition(source.Left, source.Top, source.Width, source.Height);
+          _basicVideo.SetSourcePosition(source.Left, source.Top, source.Width, source.Height);
 
-        if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
-        {
-          _basicVideo.SetDestinationPosition(destination.Left, destination.Top, destination.Width, destination.Height);
-        }
-        else
-        {
-          _basicVideo.SetDestinationPosition(0, 0, destination.Width, destination.Height);
+          if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
+          {
+            _basicVideo.SetDestinationPosition(destination.Left, destination.Top, destination.Width, destination.Height);
+          }
+          else
+          {
+            _basicVideo.SetDestinationPosition(0, 0, destination.Width, destination.Height);
+          }
         }
       }
     }
@@ -851,7 +854,7 @@ namespace MediaPortal.Player
           Log.Error("BDPlayer: Unable to get IAudioStream interface");
           return _currentAudioStream;
         }
-        audioStream.GetAudioStream(ref _currentAudioStream);        
+        audioStream.GetAudioStream(ref _currentAudioStream);
         return _currentAudioStream; 
       }
       set
@@ -1145,20 +1148,23 @@ namespace MediaPortal.Player
       {
         _updateTimer = DateTime.Now;
 
-        if (_videoWin != null)
+        if (GUIGraphicsContext.VideoRenderer != GUIGraphicsContext.VideoRendererType.madVR)
         {
-          if (GUIGraphicsContext.Overlay == false && GUIGraphicsContext.IsFullScreenVideo == false)
+          if (_videoWin != null)
           {
-            if (_isVisible)
+            if (GUIGraphicsContext.Overlay == false && GUIGraphicsContext.IsFullScreenVideo == false)
             {
-              _isVisible = false;
-              _videoWin.put_Visible(OABool.False);
+              if (_isVisible)
+              {
+                _isVisible = false;
+                _videoWin.put_Visible(OABool.False);
+              }
             }
-          }
-          else if (!_isVisible)
-          {
-            _isVisible = true;
-            _videoWin.put_Visible(OABool.True);
+            else if (!_isVisible)
+            {
+              _isVisible = true;
+              _videoWin.put_Visible(OABool.True);
+            }
           }
         }
         CheckVideoResolutionChanges();
@@ -2200,7 +2206,7 @@ namespace MediaPortal.Player
         if (MSVideoCodec != null)
         {
           _mChangedMediaType = MediaType.Audio | MediaType.Video;
-          DirectShowUtil.ReleaseComObject(MSVideoCodec);
+          DirectShowUtil.FinalReleaseComObject(MSVideoCodec);
           MSVideoCodec = null;
         }
         // hack end
@@ -2417,7 +2423,7 @@ namespace MediaPortal.Player
         if (basefilter != null)
         {
           _graphBuilder.RemoveFilter(basefilter);
-          DirectShowUtil.ReleaseComObject(basefilter);
+          DirectShowUtil.FinalReleaseComObject(basefilter);
           basefilter = null;
           Log.Info("BDPlayer: Cleanup Captions");
         }
@@ -2435,7 +2441,7 @@ namespace MediaPortal.Player
       if (isr != null)
       {
         _graphBuilder.RemoveFilter(isr);
-        DirectShowUtil.ReleaseComObject(isr);
+        DirectShowUtil.FinalReleaseComObject(isr);
       }
       #endregion
     }
@@ -2525,7 +2531,7 @@ namespace MediaPortal.Player
             if (ppFilter.Value != null)
             {
               DirectShowUtil.RemoveFilters(_graphBuilder, ppFilter.Key);
-              DirectShowUtil.ReleaseComObject(ppFilter.Value);//, 5000);
+              DirectShowUtil.FinalReleaseComObject(ppFilter.Value);//, 5000);
             }
           }
           PostProcessFilterVideo.Clear();
@@ -2541,7 +2547,7 @@ namespace MediaPortal.Player
             if (ppFilter.Value != null)
             {
               DirectShowUtil.RemoveFilters(_graphBuilder, ppFilter.Key);
-              DirectShowUtil.ReleaseComObject(ppFilter.Value);//, 5000);
+              DirectShowUtil.FinalReleaseComObject(ppFilter.Value);//, 5000);
             }
           }
           PostProcessFilterAudio.Clear();
@@ -2622,7 +2628,7 @@ namespace MediaPortal.Player
         //Add Video Codec
         if (VideoCodec != null)
         {
-          DirectShowUtil.ReleaseComObject(VideoCodec);
+          DirectShowUtil.FinalReleaseComObject(VideoCodec);
           VideoCodec = null;
         }
         VideoCodec = DirectShowUtil.AddFilterToGraph(this._graphBuilder, MatchFilters(selection));
@@ -2637,7 +2643,7 @@ namespace MediaPortal.Player
         //Add Audio Codec
         if (AudioCodec != null)
         {
-          DirectShowUtil.ReleaseComObject(AudioCodec);
+          DirectShowUtil.FinalReleaseComObject(AudioCodec);
           AudioCodec = null;
         }
         //AudioCodec = DirectShowUtil.AddFilterToGraph(this._graphBuilder, MatchFilters(selection));
@@ -2803,7 +2809,12 @@ namespace MediaPortal.Player
         Log.Info("BDPlayer: Adding filters");
 
         _vmr9 = new VMR9Util();
-        _vmr9.AddVMR9(_graphBuilder);
+        bool AddVMR9 = _vmr9.AddVMR9(_graphBuilder);
+        if (!AddVMR9)
+        {
+          Log.Error("BDPlayer: Failed to add VMR9 to graph");
+          return false;
+        }
         _vmr9.Enable(false);
 
         // Set VideoDecoder and VC1Override before adding filter in graph
@@ -2897,6 +2908,7 @@ namespace MediaPortal.Player
       catch (Exception ex)
       {
         Log.Error("BDPlayer: Exception while creating DShow graph {0}", ex.Message);
+        CloseInterfaces();
         return false;
       }
     }
@@ -2962,78 +2974,39 @@ namespace MediaPortal.Player
       {
         return;
       }
-      int hr;
       Log.Debug("BDPlayer: Cleanup DShow graph {0}", GUIGraphicsContext.InVmr9Render);
       try
       {
         BDOSDRenderer.Release();
-        
-        if (_mediaCtrl != null)
-        {
-          int counter = 0;
-          FilterState state;
-          hr = _mediaCtrl.Stop();
-          hr = _mediaCtrl.GetState(10, out state);
-          while (state != FilterState.Stopped || GUIGraphicsContext.InVmr9Render)
-          {
-            Thread.Sleep(100);
-            hr = _mediaCtrl.GetState(10, out state);
-            counter++;
-            if (counter >= 30)
-            {
-              if (state != FilterState.Stopped)
-                Log.Error("BDPlayer: graph still running");
-              if (GUIGraphicsContext.InVmr9Render)
-                Log.Error("BDPlayer: in renderer");
-              break;
-            }
-          }
-          _mediaCtrl = null;
-        }
 
         if (_vmr9 != null)
         {
+          _vmr9.Vmr9MediaCtrl(_mediaCtrl);
           _vmr9.Enable(false);
         }
 
-        if (_mediaEvt != null)
-        {
-          hr = _mediaEvt.SetNotifyWindow(IntPtr.Zero, WM_GRAPHNOTIFY, IntPtr.Zero);
-          _mediaEvt = null;
-        }
-
-        _videoWin = _graphBuilder as IVideoWindow;
-        if (_videoWin != null)
-        {
-          _videoWin.put_Owner(IntPtr.Zero);
-          _videoWin.put_Visible(OABool.False);
-          _videoWin = null;
-        }
-
-        _mediaSeeking = null;
-        _basicAudio = null;
-        _basicVideo = null;
-        _ireader = null;
-
-        #region Cleanup Sebastiii
+        #region Cleanup
 
         if (VideoCodec != null)
         {
-          DirectShowUtil.ReleaseComObject(VideoCodec, 5000);
+          DirectShowUtil.RemoveFilter(_graphBuilder, VideoCodec);
+          DirectShowUtil.FinalReleaseComObject(VideoCodec);
           VideoCodec = null;
           Log.Info("BDPlayer: Cleanup VideoCodec");
         }
 
         if (AudioCodec != null)
         {
-          DirectShowUtil.ReleaseComObject(AudioCodec, 5000);
+          DirectShowUtil.RemoveFilter(_graphBuilder, AudioCodec);
+          DirectShowUtil.FinalReleaseComObject(AudioCodec);
           AudioCodec = null;
           Log.Info("BDPlayer: Cleanup AudioCodec");
         }
 
         if (_audioRendererFilter != null)
         {
-          while (DirectShowUtil.ReleaseComObject(_audioRendererFilter) > 0) ;
+          DirectShowUtil.RemoveFilter(_graphBuilder, _audioRendererFilter);
+          DirectShowUtil.FinalReleaseComObject(_audioRendererFilter);
           _audioRendererFilter = null;
           Log.Info("BDPlayer: Cleanup AudioRenderer");
         }
@@ -3043,7 +3016,11 @@ namespace MediaPortal.Player
         {
           foreach (var ppFilter in PostProcessFilterVideo)
           {
-            if (ppFilter.Value != null) DirectShowUtil.ReleaseComObject(ppFilter.Value, 5000);
+            if (ppFilter.Value != null)
+            {
+              DirectShowUtil.RemoveFilter(_graphBuilder, ppFilter.Value as IBaseFilter);
+              DirectShowUtil.FinalReleaseComObject(ppFilter.Value);
+            }
           }
           PostProcessFilterVideo.Clear();
           Log.Info("BDPlayer: Cleanup PostProcessVideo");
@@ -3054,30 +3031,27 @@ namespace MediaPortal.Player
         {
           foreach (var ppFilter in PostProcessFilterAudio)
           {
-            if (ppFilter.Value != null) DirectShowUtil.ReleaseComObject(ppFilter.Value, 5000);
+            if (ppFilter.Value != null)
+            {
+              DirectShowUtil.RemoveFilter(_graphBuilder, ppFilter.Value as IBaseFilter);
+              DirectShowUtil.FinalReleaseComObject(ppFilter.Value);
+            }
           }
           PostProcessFilterAudio.Clear();
           Log.Info("BDPlayer: Cleanup PostProcessAudio");
         }
 
-        #endregion
-
         if (_interfaceBDReader != null)
         {
-          DirectShowUtil.ReleaseComObject(_interfaceBDReader, 5000);
+          DirectShowUtil.RemoveFilter(_graphBuilder, _interfaceBDReader);
+          DirectShowUtil.FinalReleaseComObject(_interfaceBDReader);
           _interfaceBDReader = null;
         }
 
-        if (_graphBuilder != null)
+        if (_vmr9 != null && _vmr9._vmr9Filter != null)
         {
-          DirectShowUtil.RemoveFilters(_graphBuilder);
-          if (_rotEntry != null)
-          {
-            _rotEntry.SafeDispose();
-            _rotEntry = null;
-          }
-          while ((hr = DirectShowUtil.ReleaseComObject(_graphBuilder)) > 0) ;
-          _graphBuilder = null;
+          DirectShowUtil.DisconnectAllPins(_graphBuilder, _vmr9._vmr9Filter);
+          Log.Info("VideoPlayer9: Cleanup VMR9");
         }
 
         if (_dvbSubRenderer != null)
@@ -3086,16 +3060,57 @@ namespace MediaPortal.Player
           _dvbSubRenderer = null;
         }
 
+        #endregion
+
+        _videoWin = _graphBuilder as IVideoWindow;
+        if (_videoWin != null)
+        {
+          _videoWin.put_Owner(IntPtr.Zero);
+          _videoWin.put_Visible(OABool.False);
+        }
+
+        if (_mediaEvt != null)
+        {
+          _mediaEvt.SetNotifyWindow(IntPtr.Zero, WM_GRAPHNOTIFY, IntPtr.Zero);
+        }
+
+        if (_graphBuilder != null)
+        {
+          DirectShowUtil.RemoveFilters(_graphBuilder);
+          DirectShowUtil.FinalReleaseComObject(_graphBuilder);
+          _graphBuilder = null;
+        }
+
+        _mediaCtrl = null;
+        _mediaEvt = null;
+        _mediaSeeking = null;
+        _videoWin = null;
+        _basicAudio = null;
+        _basicVideo = null;
+        _ireader = null;
+
         if (_vmr9 != null)
         {
           _vmr9.SafeDispose();
           _vmr9 = null;
         }
 
+        if (_rotEntry != null)
+        {
+          _rotEntry.SafeDispose();
+          _rotEntry = null;
+        }
+
+        //GC.Collect();
+
         _state = PlayState.Init;
       }
       catch (Exception ex)
       {
+        if (_vmr9 != null)
+        {
+          _vmr9.RestoreGuiForMadVr();
+        }
         Log.Error("BDPlayer: Exception while cleaning DShow graph - {0} {1}", ex.Message, ex.StackTrace);
       }
       //switch back to directx windowed mode

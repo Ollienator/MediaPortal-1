@@ -166,7 +166,12 @@ namespace MediaPortal.Player
         Log.Info("RTSPPlayer: add source filter");
         if (IsRadio == false)
         {
-          Vmr9.AddVMR9(graphBuilder);
+          bool AddVMR9 = Vmr9 != null && Vmr9.AddVMR9(graphBuilder);
+          if (!AddVMR9)
+          {
+            Log.Error("RTSPPlayer:Failed to add VMR9 to graph");
+            return false;
+          }
           Vmr9.Enable(false);
         }
 
@@ -454,6 +459,7 @@ namespace MediaPortal.Player
       {
         Error.SetError("Unable to play movie", "Unable build graph for VMR9");
         Log.Error("RTSPPlayer:exception while creating DShow graph {0} {1}", ex.Message, ex.StackTrace);
+        CloseInterfaces();
         return false;
       }
     }
@@ -483,38 +489,15 @@ namespace MediaPortal.Player
       Log.Info("RTSPPlayer:cleanup DShow graph");
       try
       {
-        if (_mediaCtrl != null)
-        {
-          int counter = 0;
-          FilterState state;
-          hr = _mediaCtrl.Stop();
-          hr = _mediaCtrl.GetState(10, out state);
-          while (state != FilterState.Stopped || GUIGraphicsContext.InVmr9Render)
-          {
-            Thread.Sleep(100);
-            hr = _mediaCtrl.GetState(10, out state);
-            counter++;
-            if (counter >= 30)
-            {
-              if (state != FilterState.Stopped)
-                Log.Error("RTSPPlayer: graph still running");
-              if (GUIGraphicsContext.InVmr9Render)
-                Log.Error("RTSPPlayer: in renderer");
-              break;
-            }
-          }
-          _mediaCtrl = null;
-        }
-
         if (Vmr9 != null)
         {
+          Vmr9.Vmr9MediaCtrl(_mediaCtrl);
           Vmr9.Enable(false);
         }
 
         if (mediaEvt != null)
         {
           hr = mediaEvt.SetNotifyWindow(IntPtr.Zero, WM_GRAPHNOTIFY, IntPtr.Zero);
-          mediaEvt = null;
         }
 
         videoWin = graphBuilder as IVideoWindow;
@@ -522,9 +505,10 @@ namespace MediaPortal.Player
         {
           videoWin.put_Owner(IntPtr.Zero);
           videoWin.put_Visible(OABool.False);
-          videoWin = null;
         }
 
+        _mediaCtrl = null;
+        mediaEvt = null;
         _mediaSeeking = null;
         mediaPos = null;
         basicAudio = null;
@@ -540,7 +524,7 @@ namespace MediaPortal.Player
             _rotEntry.SafeDispose();
             _rotEntry = null;
           }
-          DirectShowUtil.ReleaseComObject(graphBuilder);
+          DirectShowUtil.FinalReleaseComObject(graphBuilder);
           graphBuilder = null;
         }
 
@@ -556,27 +540,18 @@ namespace MediaPortal.Player
         if (_mpegDemux != null)
         {
           Log.Info("cleanup mpegdemux");
-          while ((hr = DirectShowUtil.ReleaseComObject(_mpegDemux)) > 0)
-          {
-            ;
-          }
+          DirectShowUtil.FinalReleaseComObject(_mpegDemux);
           _mpegDemux = null;
         }
         if (_rtspSource != null)
         {
           Log.Info("cleanup _rtspSource");
-          while ((hr = DirectShowUtil.ReleaseComObject(_rtspSource)) > 0)
-          {
-            ;
-          }
+          DirectShowUtil.FinalReleaseComObject(_rtspSource);
           _rtspSource = null;
         }
         if (_subtitleFilter != null)
         {
-          while ((hr = DirectShowUtil.ReleaseComObject(_subtitleFilter)) > 0)
-          {
-            ;
-          }
+          DirectShowUtil.FinalReleaseComObject(_subtitleFilter);
           _subtitleFilter = null;
           if (this.dvbSubRenderer != null)
           {
@@ -589,10 +564,7 @@ namespace MediaPortal.Player
         if (vobSub != null)
         {
           Log.Info("cleanup vobSub");
-          while ((hr = DirectShowUtil.ReleaseComObject(vobSub)) > 0)
-          {
-            ;
-          }
+          DirectShowUtil.FinalReleaseComObject(vobSub);
           vobSub = null;
         }
       }
@@ -776,24 +748,27 @@ namespace MediaPortal.Player
       {
         UpdateCurrentPosition();
         updateTimer = DateTime.Now;
-        if (GUIGraphicsContext.BlankScreen ||
-            (GUIGraphicsContext.Overlay == false && GUIGraphicsContext.IsFullScreenVideo == false))
+        if (GUIGraphicsContext.VideoRenderer != GUIGraphicsContext.VideoRendererType.madVR)
         {
-          if (m_bVisible)
+          if (GUIGraphicsContext.BlankScreen ||
+              (GUIGraphicsContext.Overlay == false && GUIGraphicsContext.IsFullScreenVideo == false))
           {
-            m_bVisible = false;
-            if (videoWin != null)
+            if (m_bVisible)
             {
-              videoWin.put_Visible(OABool.False);
+              m_bVisible = false;
+              if (videoWin != null)
+              {
+                videoWin.put_Visible(OABool.False);
+              }
             }
           }
-        }
-        else if (!m_bVisible)
-        {
-          m_bVisible = true;
-          if (videoWin != null)
+          else if (!m_bVisible)
           {
-            videoWin.put_Visible(OABool.True);
+            m_bVisible = true;
+            if (videoWin != null)
+            {
+              videoWin.put_Visible(OABool.True);
+            }
           }
         }
         CheckVideoResolutionChanges();

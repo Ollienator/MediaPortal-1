@@ -252,7 +252,7 @@ namespace MediaPortal.GUI.Library
 
     private VisualEffect _showAnimation = new VisualEffect(); // for dialogs
     private VisualEffect _closeAnimation = new VisualEffect();
-    public static readonly SynchronizationContext _mainThreadContext = SynchronizationContext.Current;
+    public static SynchronizationContext _mainThreadContext = SynchronizationContext.Current;
 
     #endregion
 
@@ -475,10 +475,10 @@ namespace MediaPortal.GUI.Library
       }
 
       // else load xml file now
-      GUIWindow._mainThreadContext.Send(delegate
-      {
+      //GUIWindow._mainThreadContext.Send(delegate
+      //{
         LoadSkin();
-      }, null);
+      //}, LoadSkin());
 
       if (!_windowAllocated)
       {
@@ -495,14 +495,14 @@ namespace MediaPortal.GUI.Library
     /// <returns></returns>
     public bool LoadSkin()
     {
-
       // add thread check to log calls not running in main thread/GUI
       String threadName = Thread.CurrentThread.Name;
       if (threadName != "MPMain" && threadName != "Config Main")
       {
         if (threadName != null)
         {
-          Log.Error("LoadSkin: Running on wrong thread name [{0}] - StackTrace: '{1}'", threadName, Environment.StackTrace);
+          Log.Error("LoadSkin: Running on wrong thread name [{0}] - StackTrace: '{1}'", threadName,
+            Environment.StackTrace);
         }
         else
         {
@@ -1070,10 +1070,10 @@ namespace MediaPortal.GUI.Library
     {
       if (_isSkinLoaded && (_lastSkin != GUIGraphicsContext.Skin))
       {
-        GUIWindow._mainThreadContext.Send(delegate
-        {
+        //GUIWindow._mainThreadContext.Send(delegate
+        //{
           LoadSkin();
-        }, null);
+        //}, LoadSkin());
       }
 
       if (_rememberLastFocusedControl && _rememberLastFocusedControlId >= 0)
@@ -1202,10 +1202,10 @@ namespace MediaPortal.GUI.Library
 
         Dispose();
 
-        GUIWindow._mainThreadContext.Send(delegate
-        {
+        //GUIWindow._mainThreadContext.Send(delegate
+        //{
           LoadSkin();
-        }, null);
+        //}, LoadSkin());
 
         HashSet<int> faultyControl = new HashSet<int>();
         // tell every control we're gonna alloc the resources next
@@ -1414,10 +1414,13 @@ namespace MediaPortal.GUI.Library
         }
         else
         {
-          var guicontrol = child;
-          if (guicontrol.Focus)
+          if (child != null)
           {
-            return guicontrol.GetID;
+            var guicontrol = child;
+            if (guicontrol.Focus)
+            {
+              return guicontrol.GetID;
+            }
           }
         }
       }
@@ -1505,13 +1508,19 @@ namespace MediaPortal.GUI.Library
         UpdateOverlayAllowed();
         _hasWindowVisibilityUpdated = true;
         // TODO must do a proper fix
-        for (int i = 0; i < Children.Count; i++)
+        if (Children != null)
         {
-          GUIControl control = Children[i];
-          control.UpdateVisibility();
-          control.DoRender(timePassed, currentTime);
+          foreach (GUIControl t in Children.ToList())
+          {
+            GUIControl control = t;
+            if (control != null)
+            {
+              control.UpdateVisibility();
+              control.DoRender(timePassed, currentTime);
+            }
+          }
         }
-        
+
         GUIWaitCursor.Render();
       }
       catch (Exception ex)
@@ -1750,10 +1759,10 @@ namespace MediaPortal.GUI.Library
               }
               else
               {
-                GUIWindow._mainThreadContext.Send(delegate
-                {
+                //GUIWindow._mainThreadContext.Send(delegate
+                //{
                   LoadSkin();
-                }, null);
+                //}, LoadSkin());
 
                 if (!_windowAllocated)
                 {
@@ -1763,7 +1772,7 @@ namespace MediaPortal.GUI.Library
 
               InitControls();
               UpdateOverlayAllowed();
-              GUIGraphicsContext.Overlay = _isOverlayAllowed || GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR;
+              GUIGraphicsContext.Overlay = _isOverlayAllowed;
 
               // set topbar autohide 
               switch (_autoHideTopbarType)

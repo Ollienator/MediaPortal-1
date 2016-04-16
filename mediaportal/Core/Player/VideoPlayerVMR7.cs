@@ -646,24 +646,27 @@ namespace MediaPortal.Player
     {
       if (basicVideo != null)
       {
-        if (rSource.Left < 0 || rSource.Top < 0 || rSource.Width <= 0 || rSource.Height <= 0)
+        lock (basicVideo)
         {
-          return;
-        }
-        if (rDest.Width <= 0 || rDest.Height <= 0)
-        {
-          return;
-        }
+          if (rSource.Left < 0 || rSource.Top < 0 || rSource.Width <= 0 || rSource.Height <= 0)
+          {
+            return;
+          }
+          if (rDest.Width <= 0 || rDest.Height <= 0)
+          {
+            return;
+          }
 
-        basicVideo.SetSourcePosition(rSource.Left, rSource.Top, rSource.Width, rSource.Height);
+          basicVideo.SetSourcePosition(rSource.Left, rSource.Top, rSource.Width, rSource.Height);
 
-        if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
-        {
-          basicVideo.SetDestinationPosition(rDest.Left, rDest.Top, rDest.Width, rDest.Height);
-        }
-        else
-        {
-          basicVideo.SetDestinationPosition(0, 0, rDest.Width, rDest.Height);
+          if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
+          {
+            basicVideo.SetDestinationPosition(rDest.Left, rDest.Top, rDest.Width, rDest.Height);
+          }
+          else
+          {
+            basicVideo.SetDestinationPosition(0, 0, rDest.Width, rDest.Height);
+          }
         }
       }
     }
@@ -699,24 +702,27 @@ namespace MediaPortal.Player
           mediaPos.get_Duration(out m_dDuration); //(refresh timeline when change EDITION)
           mediaPos.get_CurrentPosition(out m_dCurrentPos);
         }
-        if (GUIGraphicsContext.BlankScreen ||
-            (GUIGraphicsContext.Overlay == false && GUIGraphicsContext.IsFullScreenVideo == false))
+        if (GUIGraphicsContext.VideoRenderer != GUIGraphicsContext.VideoRendererType.madVR)
         {
-          if (m_bVisible)
+          if (GUIGraphicsContext.BlankScreen ||
+              (GUIGraphicsContext.Overlay == false && GUIGraphicsContext.IsFullScreenVideo == false))
           {
-            m_bVisible = false;
-            if (videoWin != null)
+            if (m_bVisible)
             {
-              videoWin.put_Visible(OABool.False);
+              m_bVisible = false;
+              if (videoWin != null)
+              {
+                videoWin.put_Visible(OABool.False);
+              }
             }
           }
-        }
-        else if (!m_bVisible)
-        {
-          m_bVisible = true;
-          if (videoWin != null)
+          else if (!m_bVisible)
           {
-            videoWin.put_Visible(OABool.True);
+            m_bVisible = true;
+            if (videoWin != null)
+            {
+              videoWin.put_Visible(OABool.True);
+            }
           }
         }
         updateTimer = DateTime.Now;

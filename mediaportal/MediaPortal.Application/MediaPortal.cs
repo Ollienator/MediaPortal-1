@@ -985,6 +985,12 @@ public class MediaPortalApp : D3D, IRender
               Application.Run(app);
               app.Focus();
             }
+            catch (ThreadStateException ex)
+            {
+              Log.Error(ex);
+              Log.Error("MediaPortal stopped due to thread exception {0} {1} {2}", ex.Message, ex.Source, ex.StackTrace);
+              _mpCrashed = true;
+            }
             catch (Exception ex)
             {
               Log.Error(ex);
@@ -1298,6 +1304,7 @@ public class MediaPortalApp : D3D, IRender
     GUIWindowManager.OnNewAction += OnAction;
     GUIWindowManager.Receivers += OnMessage;
     GUIWindowManager.Callbacks += MPProcess;
+    GUIWindowManager.MadVrCallbacks += MadVRMPProcess;
 
     GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.STARTING;
 
@@ -2273,8 +2280,8 @@ public class MediaPortalApp : D3D, IRender
       GUIGraphicsContext.DX9Device.DeviceLost -= OnDeviceLost;
     }
 
-    if (VMR9Util.g_vmr9 != null && GUIGraphicsContext.Vmr9Active && 
-        GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.EVR))
+    if (VMR9Util.g_vmr9 != null && GUIGraphicsContext.Vmr9Active &&
+        GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.EVR)
     {
       VMR9Util.g_vmr9.UpdateEVRDisplayFPS(); // Update FPS
     }
@@ -2916,6 +2923,30 @@ public class MediaPortalApp : D3D, IRender
         HandleMessage();
         FrameMove();
         FullRender();
+      }
+      catch (Exception ex)
+      {
+        Log.Error(ex);
+      }
+    }
+  }
+
+  /// <summary>
+  /// Process() gets called for madVR.
+  /// It contains the message loop 
+  /// </summary>
+  public void MadVRMPProcess()
+  {
+    if (!_suspended && AppActive)
+    {
+      try
+      {
+        int process = 10;
+        while (process > 0)
+        {
+          FullRender();
+          process--;
+        }
       }
       catch (Exception ex)
       {

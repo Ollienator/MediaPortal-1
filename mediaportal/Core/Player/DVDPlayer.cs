@@ -429,25 +429,19 @@ namespace MediaPortal.Player
 
         if (_dvdbasefilter != null)
         {
-          while ((hr = DirectShowUtil.ReleaseComObject(_dvdbasefilter)) > 0)
-          {
-            ;
-          }
+          DirectShowUtil.FinalReleaseComObject(_dvdbasefilter);
           _dvdbasefilter = null;
         }
 
         if (_cmdOption != null)
         {
-          DirectShowUtil.ReleaseComObject(_cmdOption);
+          DirectShowUtil.FinalReleaseComObject(_cmdOption);
         }
         _cmdOption = null;
         _pendingCmd = false;
         if (_line21Decoder != null)
         {
-          while ((hr = DirectShowUtil.ReleaseComObject(_line21Decoder)) > 0)
-          {
-            ;
-          }
+          DirectShowUtil.FinalReleaseComObject(_line21Decoder);
           _line21Decoder = null;
         }
 
@@ -460,19 +454,13 @@ namespace MediaPortal.Player
             _rotEntry.SafeDispose();
             _rotEntry = null;
           }
-          while ((hr = DirectShowUtil.ReleaseComObject(_graphBuilder)) > 0)
-          {
-            ;
-          }
+          DirectShowUtil.FinalReleaseComObject(_graphBuilder);
           _graphBuilder = null;
         }
 
         if (_dvdGraph != null)
         {
-          while ((hr = DirectShowUtil.ReleaseComObject(_dvdGraph)) > 0)
-          {
-            ;
-          }
+          DirectShowUtil.FinalReleaseComObject(_dvdGraph);
           _dvdGraph = null;
         }
         _state = PlayState.Init;
@@ -1420,20 +1408,23 @@ namespace MediaPortal.Player
 
     protected virtual void OnProcess()
     {
-      if (_videoWin != null)
+      if (GUIGraphicsContext.VideoRenderer != GUIGraphicsContext.VideoRendererType.madVR)
       {
-        if (GUIGraphicsContext.Overlay == false && GUIGraphicsContext.IsFullScreenVideo == false)
+        if (_videoWin != null)
         {
-          if (_visible)
+          if (GUIGraphicsContext.Overlay == false && GUIGraphicsContext.IsFullScreenVideo == false)
           {
-            _visible = false;
-            _videoWin.put_Visible(OABool.False);
+            if (_visible)
+            {
+              _visible = false;
+              _videoWin.put_Visible(OABool.False);
+            }
           }
-        }
-        else if (!_visible)
-        {
-          _visible = true;
-          _videoWin.put_Visible(OABool.True);
+          else if (!_visible)
+          {
+            _visible = true;
+            _videoWin.put_Visible(OABool.True);
+          }
         }
       }
     }
@@ -2143,24 +2134,27 @@ namespace MediaPortal.Player
     {
       if (_basicVideo != null)
       {
-        if (source.Left < 0 || source.Top < 0 || source.Width <= 0 || source.Height <= 0)
+        lock (_basicVideo)
         {
-          return;
-        }
-        if (destination.Width <= 0 || destination.Height <= 0)
-        {
-          return;
-        }
+          if (source.Left < 0 || source.Top < 0 || source.Width <= 0 || source.Height <= 0)
+          {
+            return;
+          }
+          if (destination.Width <= 0 || destination.Height <= 0)
+          {
+            return;
+          }
 
-        _basicVideo.SetSourcePosition(source.Left, source.Top, source.Width, source.Height);
+          _basicVideo.SetSourcePosition(source.Left, source.Top, source.Width, source.Height);
 
-        if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
-        {
-          _basicVideo.SetDestinationPosition(destination.Left, destination.Top, destination.Width, destination.Height);
-        }
-        else
-        {
-          _basicVideo.SetDestinationPosition(0, 0, destination.Width, destination.Height);
+          if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
+          {
+            _basicVideo.SetDestinationPosition(destination.Left, destination.Top, destination.Width, destination.Height);
+          }
+          else
+          {
+            _basicVideo.SetDestinationPosition(0, 0, destination.Width, destination.Height);
+          }
         }
       }
     }

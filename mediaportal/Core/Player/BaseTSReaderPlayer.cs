@@ -649,7 +649,7 @@ namespace MediaPortal.Player
 
     public override void SetVideoWindow()
     {
-      lock (lockObj)
+      //lock (lockObj)
       {
         if (GUIGraphicsContext.IsFullScreenVideo != _isFullscreen)
         {
@@ -782,30 +782,33 @@ namespace MediaPortal.Player
       }
 
       _lastPosition = CurrentPosition;
-      if (GUIGraphicsContext.VideoWindow.Width <= 10 && GUIGraphicsContext.IsFullScreenVideo == false)
+      if (GUIGraphicsContext.VideoRenderer != GUIGraphicsContext.VideoRendererType.madVR)
       {
-        _isVisible = false;
-      }
-      if (GUIGraphicsContext.BlankScreen)
-      {
-        _isVisible = false;
-      }
-      if (_isWindowVisible && !_isVisible)
-      {
-        _isWindowVisible = false;
-        //Log.Info("TSReaderPlayer:hide window");
-        if (_videoWin != null)
+        if (GUIGraphicsContext.VideoWindow.Width <= 10 && GUIGraphicsContext.IsFullScreenVideo == false)
         {
-          _videoWin.put_Visible(OABool.False);
+          _isVisible = false;
         }
-      }
-      else if (!_isWindowVisible && _isVisible)
-      {
-        _isWindowVisible = true;
-        //Log.Info("TSReaderPlayer:show window");
-        if (_videoWin != null)
+        if (GUIGraphicsContext.BlankScreen)
         {
-          _videoWin.put_Visible(OABool.True);
+          _isVisible = false;
+        }
+        if (_isWindowVisible && !_isVisible)
+        {
+          _isWindowVisible = false;
+          //Log.Info("TSReaderPlayer:hide window");
+          if (_videoWin != null)
+          {
+            _videoWin.put_Visible(OABool.False);
+          }
+        }
+        else if (!_isWindowVisible && _isVisible)
+        {
+          _isWindowVisible = true;
+          //Log.Info("TSReaderPlayer:show window");
+          if (_videoWin != null)
+          {
+            _videoWin.put_Visible(OABool.True);
+          }
         }
       }
       OnProcess();
@@ -1464,24 +1467,27 @@ namespace MediaPortal.Player
     {
       if (_basicVideo != null)
       {
-        if (rSource.Left < 0 || rSource.Top < 0 || rSource.Width <= 0 || rSource.Height <= 0)
+        lock (_basicVideo)
         {
-          return;
-        }
-        if (rDest.Width <= 0 || rDest.Height <= 0)
-        {
-          return;
-        }
+          if (rSource.Left < 0 || rSource.Top < 0 || rSource.Width <= 0 || rSource.Height <= 0)
+          {
+            return;
+          }
+          if (rDest.Width <= 0 || rDest.Height <= 0)
+          {
+            return;
+          }
 
-        _basicVideo.SetSourcePosition(rSource.Left, rSource.Top, rSource.Width, rSource.Height);
+          _basicVideo.SetSourcePosition(rSource.Left, rSource.Top, rSource.Width, rSource.Height);
 
-        if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
-        {
-          _basicVideo.SetDestinationPosition(rDest.Left, rDest.Top, rDest.Width, rDest.Height);
-        }
-        else
-        {
-          _basicVideo.SetDestinationPosition(0, 0, rDest.Width, rDest.Height);
+          if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
+          {
+            _basicVideo.SetDestinationPosition(rDest.Left, rDest.Top, rDest.Width, rDest.Height);
+          }
+          else
+          {
+            _basicVideo.SetDestinationPosition(0, 0, rDest.Width, rDest.Height);
+          }
         }
       }
     }
@@ -1670,11 +1676,11 @@ namespace MediaPortal.Player
               {
                 CleanupCC();
                 DirectShowUtil.RenderGraphBuilderOutputPins(_graphBuilder, _fileSource);
-                DirectShowUtil.RenderUnconnectedOutputPins(_graphBuilder, filterCodec.VideoCodec);                
+                DirectShowUtil.RenderUnconnectedOutputPins(_graphBuilder, filterCodec.VideoCodec);
                 EnableCC();
                 if (CoreCCPresent)
                 {
-                  DirectShowUtil.RenderUnconnectedOutputPins(_graphBuilder, filterCodec.CoreCCParser);                  
+                  DirectShowUtil.RenderUnconnectedOutputPins(_graphBuilder, filterCodec.CoreCCParser);
                   EnableCC2();
                 }
               }
@@ -1994,7 +2000,7 @@ namespace MediaPortal.Player
         //Add Video Codec
         if (filterCodec.VideoCodec != null)
         {
-          DirectShowUtil.ReleaseComObject(filterCodec.VideoCodec);
+          DirectShowUtil.FinalReleaseComObject(filterCodec.VideoCodec);
           filterCodec.VideoCodec = null;
         }
         filterCodec.VideoCodec = DirectShowUtil.AddFilterToGraph(this._graphBuilder, MatchFilters(selection));
@@ -2019,7 +2025,7 @@ namespace MediaPortal.Player
         //Add Audio Codec
         if (filterCodec.AudioCodec != null)
         {
-          DirectShowUtil.ReleaseComObject(filterCodec.AudioCodec);
+          DirectShowUtil.FinalReleaseComObject(filterCodec.AudioCodec);
           filterCodec.AudioCodec = null;
         }
         filterCodec.AudioCodec = DirectShowUtil.AddFilterToGraph(this._graphBuilder, MatchFilters(selection));

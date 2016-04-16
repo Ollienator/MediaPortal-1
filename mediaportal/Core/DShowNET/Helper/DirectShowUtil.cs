@@ -241,7 +241,7 @@ namespace DShowNET.Helper
                 {
                   Log.Info("remove " + filter.Name + " from graph");
                   pinOut = FindSourcePinOf(pBasefilter[0]);
-                  graphBuilder.RemoveFilter(pBasefilter[0]);
+                  RemoveFilter(graphBuilder, pBasefilter[0]);
                   bAllRemoved = true;
                   break;
                 }
@@ -676,7 +676,7 @@ namespace DShowNET.Helper
       if (!TryConnect(graphbuilder, source, mediaType, destination))
       {
         Log.Info(" - not compatible, removed");
-        graphbuilder.RemoveFilter(destination);
+        RemoveFilter(graphbuilder, destination);
       }
       else
         connected = true;
@@ -798,7 +798,7 @@ namespace DShowNET.Helper
               }
               else
               {
-                graphBuilder.RemoveFilter(f);
+                RemoveFilter(graphBuilder, f);
                 ReleaseComObject(f);
               }
             }
@@ -1199,7 +1199,7 @@ namespace DShowNET.Helper
             ReleaseComObject(pinEnum);
             if (!filterUsed && hasOut && hasIn)
             {
-              hr = graphBuilder.RemoveFilter(filter);
+              hr = RemoveFilter(graphBuilder, filter);
               DsError.ThrowExceptionForHR(hr);
               if (hr == 0)
                 Log.Debug(" - remove done");
@@ -1678,6 +1678,20 @@ namespace DShowNET.Helper
       return null;
     }
 
+    public static int RemoveFilter(IGraphBuilder graphBuilder, IBaseFilter filter)
+    {
+      try
+      {
+        DisconnectAllPins(graphBuilder, filter);
+        return graphBuilder.RemoveFilter(filter);
+      }
+      catch (Exception)
+      {
+        Log.Debug("Failed to remove filter");
+      }
+      return 0;
+    }
+
     public static void RemoveFilters(IGraphBuilder graphBuilder)
     {
       RemoveFilters(graphBuilder, String.Empty);
@@ -1720,7 +1734,7 @@ namespace DShowNET.Helper
               if (String.Equals(info.achName, filterName))
               {
                 DisconnectAllPins(graphBuilder, filter);
-                hr = graphBuilder.RemoveFilter(filter);
+                hr = RemoveFilter(graphBuilder, filter);
                 DsError.ThrowExceptionForHR(hr);
                 ReleaseComObject(filter);
                 Log.Debug("Remove filter from graph: {0}", info.achName);
@@ -1729,10 +1743,10 @@ namespace DShowNET.Helper
             else
             {
               DisconnectAllPins(graphBuilder, filter);
-              hr = graphBuilder.RemoveFilter(filter);
+              hr = RemoveFilter(graphBuilder, filter);
               DsError.ThrowExceptionForHR(hr);
-              int i = ReleaseComObject(filter);
-              Log.Debug("Remove filter from graph: {0} {1}", info.achName, i);
+              ReleaseComObject(filter);
+              Log.Debug("Remove filter from graph: {0}", info.achName);
             }
           }
           catch (Exception error)
@@ -1973,7 +1987,7 @@ namespace DShowNET.Helper
               PinInfo info;
               pins[0].QueryPinInfo(out info);
               DsUtils.FreePinInfo(info);
-              if (String.Compare(info.name, strPinName) == 0)
+              if (String.CompareOrdinal(info.name, strPinName) == 0)
               {
                 ReleaseComObject(pinEnum);
                 return pins[0];
@@ -2163,7 +2177,7 @@ namespace DShowNET.Helper
       }
       if (remove)
       {
-        graphBuilder.RemoveFilter(fromFilter);
+        RemoveFilter(graphBuilder, fromFilter);
       }
       ReleaseComObject(enumPins);
     }
@@ -2212,17 +2226,38 @@ namespace DShowNET.Helper
       return 0;
     }
 
-    public static int ReleaseComObject(object obj)
+    public static void ReleaseComObject(object obj)
     {
-      if (obj != null)
+      try
       {
-        return Marshal.ReleaseComObject(obj);
+        if (obj != null)
+        {
+          Marshal.ReleaseComObject(obj);
+        }
+        obj = null;
       }
+      catch (Exception)
+      {
+        StackTrace st = new StackTrace(true);
+        Log.Error("Exception while releasing COM object (NULL) - stacktrace: {0}", st);
+      }
+    }
 
-      StackTrace st = new StackTrace(true);
-      Log.Error("Exception while releasing COM object (NULL) - stacktrace: {0}", st);
-
-      return 0;
+    public static void FinalReleaseComObject(object obj)
+    {
+      try
+      {
+        if (obj != null)
+        {
+          while (Marshal.FinalReleaseComObject(obj) > 0) ;
+        }
+        obj = null;
+      }
+      catch (Exception)
+      {
+        StackTrace st = new StackTrace(true);
+        Log.Error("Exception while releasing COM object (NULL) - stacktrace: {0}", st);
+      }
     }
   }
 }
