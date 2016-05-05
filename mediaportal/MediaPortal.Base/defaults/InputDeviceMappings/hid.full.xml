@@ -1,5 +1,214 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <HidHandler version="1">
+
+  <!--Keyboard setup-->
+  <HidUsageAction UsagePage="GenericDesktopControls" UsageCollection="Keyboard" HandleHidEventsWhileInBackground="true">
+      
+    <!-- Action/Enter for Return key-->    
+    <button code="Return">
+      <action layer="0" condition="WINDOW" conproperty="11" command="ACTION" cmdproperty="47" sound="click.wav"/>
+      <action layer="0" condition="WINDOW" conproperty="10" command="ACTION" cmdproperty="10" sound="back.wav"/>
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="7" sound="click.wav"/>
+    </button>
+
+    <!-- Back for Escape key-->
+    <button code="Escape">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="10" sound="back.wav"/>
+    </button>
+
+    <!-- Direction arrow keys for focus control -->
+    <button code="Left" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="1" sound="cursor.wav"/>
+    </button>
+    <button code="Down" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="4" sound="cursor.wav"/>
+    </button>
+    <button code="Right" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="2" sound="cursor.wav"/>
+    </button>
+    <button code="Up" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="3" sound="cursor.wav"/>
+    </button>
+
+    <!-- Digits -->
+    <button code="D0" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="58" sound="cursor.wav"/>
+    </button>
+
+    <button code="D1" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="59" sound="cursor.wav"/>
+    </button>
+
+    <button code="D2" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="60" sound="cursor.wav"/>
+    </button>
+
+    <button code="D3" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="61" sound="cursor.wav"/>
+    </button>
+
+    <button code="D4" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="62" sound="cursor.wav"/>
+    </button>
+    
+    <button code="D5" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="63" sound="cursor.wav"/>
+    </button>
+    
+    <button code="D6" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="64" sound="cursor.wav"/>
+    </button>
+    
+    <button code="D7" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="65" sound="cursor.wav"/>
+    </button>
+
+    <button code="D8" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="66" sound="cursor.wav"/>
+    </button>
+
+    <button code="D9" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="67" sound="cursor.wav"/>
+    </button>
+
+    <!-- play music -->
+    <button code="P" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="79" sound="cursor.wav"/>
+    </button>
+
+    <!-- fast forward music -->
+    <button code="F6" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="77" sound="cursor.wav"/>
+    </button>
+
+    <!-- rewind music -->
+    <button code="F5" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="78" sound="cursor.wav"/>
+    </button>
+
+    <!-- Page up -->
+    <button code="PageUp" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="5" sound="cursor.wav"/>
+    </button>
+
+    <!-- Page Down -->
+    <button code="PageDown" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="6" sound="cursor.wav"/>
+    </button>
+
+    <!-- Select first item -->
+    <button code="Home" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="109" sound="cursor.wav"/>
+    </button>
+
+    <!-- Select last item -->
+    <button code="End" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="110" sound="cursor.wav"/>
+    </button>
+
+    <!-- Delete item -->
+    <button code="Delete" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="80" sound="cursor.wav"/>
+    </button>
+
+    <!-- Parent directory -->
+    <button code="U" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="9" sound="click.wav"/>
+    </button>
+
+    <!-- Show file info -->
+    <button code="F3" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="11" sound="click.wav"/>
+    </button>
+
+    <!-- Pause -->
+    <button code="Space" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="12" sound="click.wav"/>
+    </button>
+
+    <!-- Stop -->
+    <button code="B" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="13" sound="click.wav"/>
+    </button>
+
+    <!-- Skip next -->
+    <button code="F8" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="14" sound="click.wav"/>
+    </button>
+
+    <!-- Skip previous -->
+    <button code="F7" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="15" sound="click.wav"/>
+    </button>
+
+    <!-- Toggle between GUI and fullscreen -->
+    <button code="X" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="18" sound="click.wav"/>
+    </button>
+
+    <!-- Volume Up -->
+    <button code="Add" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="103" sound="click.wav"/>
+    </button>
+
+    <!-- Volume Down -->
+    <button code="Subtract" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="102" sound="click.wav"/>
+    </button>
+
+    <!-- record current tv program -->
+    <button code="R" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="89" sound="click.wav"/>
+    </button>
+
+    <!-- show context menu for currently selected item -->
+    <button code="F9" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="106" sound="click.wav"/>
+    </button>
+
+    <!-- Toggle Subtitles -->
+    <button code="L" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="119" sound="click.wav"/>
+    </button>
+
+    <!-- Cycle Audio Language or Type -->
+    <button code="A" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="26" sound="click.wav"/>
+    </button>
+
+    <!-- Mute -->
+    <button code="M" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="9982" sound="click.wav"/>
+    </button>
+
+    <!-- Take Screenshot -->
+    <button code="F11" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="85" sound="click.wav"/>
+    </button>
+
+    <!-- Toggle Autocrop -->
+    <button code="F4" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="9885" sound="click.wav"/>
+    </button>
+
+    <!-- TGB - Switch home -->
+    <button code="H" shift="false" alt="false" win="false" ctrl="false">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="115" sound="click.wav"/>
+    </button>
+
+    <!-- Toggle Gap / Crossfade (BASS Player only) -->
+    <button code="G" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="9886" sound="click.wav"/>
+    </button>
+
+    <!-- Jump to Music Now Playing -->
+    <button code="Z" repeat="true">
+      <action layer="0" condition="*" conproperty="-1" command="ACTION" cmdproperty="125" sound="click.wav"/>
+    </button>
+
+  </HidUsageAction>
+
+  <!--Application Control setup-->
   <HidUsageAction UsagePage="Consumer" UsageCollection="ConsumerControl" HandleHidEventsWhileInBackground="true">
 
     <button code="AppCtrlBack">

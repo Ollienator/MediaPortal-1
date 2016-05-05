@@ -2271,7 +2271,7 @@ namespace MediaPortal
 
       if (e.Handled == false)
       {
-        KeyDownEvent(e);
+        //KeyDownEvent(e);
       }
     }
 

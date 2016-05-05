@@ -121,14 +121,18 @@ namespace MediaPortal.InputDevices
     /// </summary>
     private class Button
     {
-      private readonly List<ConditionalAction> _actions = new List<ConditionalAction>();
+      private readonly List<ConditionalAction> _actions;
 
-      public Button(string newCode, string newName, bool aBackground, bool aRepeat, List<ConditionalAction> aActions)
+      public Button(string aCode, string aName, bool aBackground, bool aRepeat, bool aShift, bool aCtrl, bool aAlt, bool aWin, List<ConditionalAction> aActions)
       {
-        Code = newCode;
-        Name = newName;
+        Code = aCode;
+        Name = aName;
         Background = aBackground;
         Repeat = aRepeat;
+        NeedsModifierShift = aShift;
+        NeedsModifierControl = aCtrl;
+        NeedsModifierAlt = aAlt;
+        NeedsModifierWindows = aWin;
         _actions = aActions;
       }
 
@@ -145,6 +149,29 @@ namespace MediaPortal.InputDevices
       /// </summary>
       public bool Repeat { get; private set; }
 
+      /// <summary>
+      ///   Tells whether this button needs shift modifier.
+      /// </summary>
+      public bool NeedsModifierShift { get; private set; }
+
+      /// <summary>
+      ///   Tells whether this button needs control modifier.
+      /// </summary>
+      public bool NeedsModifierControl { get; private set; }
+
+      /// <summary>
+      ///   Tells whether this button needs alt modifier.
+      /// </summary>
+      public bool NeedsModifierAlt { get; private set; }
+
+      /// <summary>
+      ///   Tells whether this button needs windows modifier.
+      /// </summary>
+      public bool NeedsModifierWindows { get; private set; }
+
+      /// <summary>
+      /// Actions this buttons can trigger.
+      /// </summary>
       public List<ConditionalAction> Actions
       {
         get { return _actions; }
@@ -155,6 +182,35 @@ namespace MediaPortal.InputDevices
 
     #region Implementation
 
+
+    /// <summary>
+    /// Convert an XML attribute value to boolean
+    /// </summary>
+    /// <param name="aAttribute"></param>
+    /// <param name="aDefault"></param>
+    /// <returns></returns>
+    public static bool AttributeValueToBoolean(XmlAttribute aAttribute, bool aDefault=false)
+    {
+      if (aAttribute == null)
+      {
+        return aDefault;
+      }
+
+      string val = aAttribute.Value.ToLower();
+
+      if (val.Equals("true") || val.Equals("on") || val.Equals("enabled") || val.Equals("1"))
+      {
+        return true;
+      }
+
+      if (val.Equals("false") || val.Equals("off") || val.Equals("disabled") || val.Equals("0"))
+      {
+        return false;
+      }
+
+      Log.Warn("HID XML configuration: can't parse attribute value '{0}' using default '{1}' instead.", aAttribute.Value, aDefault);
+      return aDefault;
+    }
 
     /// <summary>
     /// Load mapping from XML file
@@ -176,7 +232,7 @@ namespace MediaPortal.InputDevices
         //Get element name and code
         var code = nodeButton.Attributes["code"].Value;
 
-        //We do not require a name attribute anymore as the code itself can in most cases used as a name too
+        //We do not require a name attribute anymore as the code itself can in most cases be used as a name too
         var name = "";
         var nameAttribute = nodeButton.Attributes["name"];
         if (nameAttribute != null)
@@ -191,28 +247,23 @@ namespace MediaPortal.InputDevices
         }
 
         //Check if this command is supported while MP is in background
-        var background = false;
-        if (nodeButton.Attributes["background"] != null &&
-            (nodeButton.Attributes["background"].Value == "true" ||
-             nodeButton.Attributes["background"].Value == "1"))
-        {
-          background = true;
-        }
+        bool background = AttributeValueToBoolean(nodeButton.Attributes["background"]);
 
         //Check if this command supports repeats
-        bool repeat = false;
-        if (nodeButton.Attributes["repeat"] != null &&
-            (nodeButton.Attributes["repeat"].Value == "true" ||
-             nodeButton.Attributes["repeat"].Value == "1"))
-        {
-            repeat = true;
-        }
+        bool repeat = AttributeValueToBoolean(nodeButton.Attributes["repeat"]);
+
+        // Get the required keyboard modifiers 
+        bool shift = AttributeValueToBoolean(nodeButton.Attributes["shift"]);
+        bool ctrl = AttributeValueToBoolean(nodeButton.Attributes["ctrl"]);
+        bool alt = AttributeValueToBoolean(nodeButton.Attributes["alt"]);
+        bool win = AttributeValueToBoolean(nodeButton.Attributes["win"]);
+
 
         //Now try and parse our usage code using the provided method
         ushort usage = 0;
         if (!aTryParseUsage(code, out usage))
         {
-          Log.Warn("HID XML configuration parser: can't parse usage {0} for button {1}", code, name);
+          Log.Warn("HID: XML loader can't parse usage {0} for button {1}", code, name);
           continue;
         }
 
@@ -252,7 +303,7 @@ namespace MediaPortal.InputDevices
             cmdProperty, cmdKeyChar, cmdKeyCode, sound, focus);
           actions.Add(conditionMap);
         }
-        var button = new Button(code, name, background, repeat, actions);
+        var button = new Button(code, name, background, repeat, shift, ctrl, alt, win, actions);
         _buttons.Add(button);
       }
       IsLoaded = true;
